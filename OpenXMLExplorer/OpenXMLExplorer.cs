@@ -12,7 +12,7 @@ using System.IO.Compression;
 namespace OpenXMLExplorer
 {
     [ComVisible(true)]
-    [COMServerAssociation(AssociationType.ClassOfExtension, ".xlsx")]
+    [COMServerAssociation(AssociationType.ClassOfExtension, ".xlsx", ".docx", ".pptx")]
     public class OpenXMLExtract : SharpContextMenu
     {
         protected override bool CanShowMenu()
@@ -26,11 +26,7 @@ namespace OpenXMLExplorer
             var menu = new ContextMenuStrip();
 
             //  Create a menu item.
-            var openxmlExtract = new ToolStripMenuItem
-            {
-                Text = "OpenXML Extract"
-            };
-
+            var openxmlExtract = new ToolStripMenuItem("OpenXML Extract");
             openxmlExtract.Click += (sender, args) => DoExtract(sender, args);
 
             //  Add the item to the context menu.
@@ -46,14 +42,14 @@ namespace OpenXMLExplorer
             //  Go through each file.
             foreach (var filePath in SelectedItemPaths)
             {
-                this.ExtractExcel(filePath);
+                this.Extract(filePath);
             }
 
             //  Show the ouput.
             //MessageBox.Show("Extract success!");
         }
 
-        private void ExtractExcel(string filePath)
+        private void Extract(string filePath)
         {
             try
             {
@@ -63,6 +59,14 @@ namespace OpenXMLExplorer
                 {
                     DirectoryInfo directoryInfo = new DirectoryInfo(text);
                     directoryInfo.Delete(true);
+                }
+
+                //Empty file
+                FileInfo fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length == 0)
+                {
+                    Directory.CreateDirectory(text);
+                    return;
                 }
 
                 string text2 = Path.GetDirectoryName(filePath) + Path.DirectorySeparatorChar + Path.GetRandomFileName();
@@ -177,12 +181,15 @@ namespace OpenXMLExplorer
             var menu = new ContextMenuStrip();
 
             //  Create a menu item.
-            var openxmlCompress = new ToolStripMenuItem
-            {
-                Text = "OpenXML Compress"
-            };
+            var openxmlCompress = new ToolStripMenuItem("OpenXML Compress");
+            var excelItem = openxmlCompress.DropDownItems.Add(DocumentType.Excel.GetFileExtension());
+            var wordItem = openxmlCompress.DropDownItems.Add(DocumentType.Word.GetFileExtension());
+            var pptItem = openxmlCompress.DropDownItems.Add(DocumentType.PowerPoint.GetFileExtension());
 
-            openxmlCompress.Click += (sender, args) => DoCompress(sender, args);
+            //Add events
+            excelItem.Click += (sender, args) => DoCompress(sender, args, DocumentType.Excel);
+            wordItem.Click += (sender, args) => DoCompress(sender, args, DocumentType.Word);
+            pptItem.Click += (sender, args) => DoCompress(sender, args, DocumentType.PowerPoint);
 
             //  Add the item to the context menu.
             menu.Items.Add(openxmlCompress);
@@ -192,16 +199,16 @@ namespace OpenXMLExplorer
         }
 
 
-        private void DoCompress(object sender, EventArgs args)
+        private void DoCompress(object sender, EventArgs args, DocumentType dType)
         {
             //  Go through each file.
             foreach (var filePath in SelectedItemPaths)
             {
-                this.CompressExcel(filePath);
+                this.Compress(filePath, dType);
             }
         }
 
-        private void CompressExcel(string filePath)
+        private void Compress(string filePath, DocumentType dType)
         {
             try
             {
@@ -214,7 +221,7 @@ namespace OpenXMLExplorer
                     fullName,
                     Path.DirectorySeparatorChar,
                     fileName,
-                    ".xlsx"
+                    dType.GetFileExtension()
                 });
 
                 int num = 1;
@@ -226,7 +233,7 @@ namespace OpenXMLExplorer
                         Path.DirectorySeparatorChar,
                         fileName,
                         num++,
-                        ".xlsx"
+                        dType.GetFileExtension()
                     });
 
                     if (num > 1000)
@@ -244,6 +251,38 @@ namespace OpenXMLExplorer
                 Console.Write(ex.StackTrace);
                 Console.ReadKey();
             }
+        }
+    }
+
+    public enum DocumentType
+    {
+        Excel,
+        Word,
+        PowerPoint
+    }
+
+    public static class Helpers
+    {
+        public static string GetFileExtension(this DocumentType dType)
+        {
+            string fe = string.Empty;
+
+            switch (dType)
+            {
+                case DocumentType.Excel:
+                    fe = ".xlsx";
+                    break;
+                case DocumentType.Word:
+                    fe = ".docx";
+                    break;
+                case DocumentType.PowerPoint:
+                    fe = ".pptx";
+                    break;
+                default:
+                    break;
+            }
+
+            return fe;
         }
     }
 }
